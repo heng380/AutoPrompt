@@ -64,7 +64,12 @@ pip install -r requirements.txt
 
 **使用 .env 文件（推荐）**：
 
-在项目根目录创建 `.env` 文件，添加：
+1. 复制示例配置文件：
+```bash
+cp .env.example .env
+```
+
+2. 编辑 `.env` 文件，将 `your_openai_api_key_here` 替换为你的实际 API Key：
 ```
 OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
@@ -79,7 +84,12 @@ OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 **使用 .env 文件（推荐）**：
 
-在项目根目录创建 `.env` 文件，添加：
+1. 复制示例配置文件：
+```bash
+cp .env.example .env
+```
+
+2. 编辑 `.env` 文件，取消注释 Azure OpenAI 相关配置，并填入你的实际值：
 ```
 AZURE_OPENAI_API_KEY=你的Azure_API密钥
 AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com/
@@ -110,47 +120,64 @@ python app.py
    - 支持 CSV、JSON、JSONL 格式
    - CSV 文件应包含 `input` 和 `ground_truth` 列（或类似名称）
    - JSON/JSONL 文件应包含 `input` 和 `ground_truth` 字段
+   - 💡 **快速测试**：可以直接使用项目中的 `example_data/example_dataset.csv`
 
 2. **输入原始 Prompt**
    - 在文本框中输入你的初始 prompt
    - Prompt 应该描述任务要求和期望的输出格式
+   - 💡 **快速测试**：可以复制 `example_data/example_prompt.txt` 中的内容
 
 3. **设置参数**
-   - 设置最大迭代轮次（1-20）
+   - 设置最大迭代轮次（1-20，建议先用 3-5 次测试）
    - 点击"开始优化"按钮
 
 4. **查看结果**
    - 系统会自动进行多轮优化
-   - 显示最终优化后的 prompt
-   - 显示准确率和优化历史
+   - 显示准确率变化折线图
+   - 显示最终优化后的 prompt（与原始 prompt 对比）
+   - 通过下拉框查看每轮迭代的详细结果（prompt、预测结果、改进建议）
 
 ## 数据集格式示例
 
-### CSV 格式
+项目提供了示例数据在 `example_data/` 目录中，你可以直接使用它们进行测试。
+
+### CSV 格式示例
+
+`example_data/example_dataset.csv` 是一个文本分类任务的数据集：
+
 ```csv
-input,ground_truth
-"计算 2+3 等于多少？","5"
-"10 乘以 5 是多少？","50"
+itemId	Headline	Typography
+jxMuJYMZn7BCIg	Daily life in RAJASTHAN, INDIA 🇮🇳- CITY vs RURAL	1
+BB1pyNbo	Review: INSANE 8-across Business Class on United's 777-200	1
+AA1oW3oj	10 of the Coolest Cars Ever Made & 10 That Nobody Cares About	0
+AA1okiqu	BLACK FOREST Mega Cake!! _ How To Cake It	1
 ```
 
-### JSON 格式
+**说明**：
+- `Headline` 列会被自动识别为输入列
+- `Typography` 列会被自动识别为标准答案列（0 或 1）
+- `itemId` 列会被保留但不参与预测
+
+### JSON 格式示例
+
 ```json
 [
   {
-    "input": "计算 2+3 等于多少？",
-    "ground_truth": "5"
+    "input": "Daily life in RAJASTHAN, INDIA 🇮🇳- CITY vs RURAL",
+    "ground_truth": "1"
   },
   {
-    "input": "10 乘以 5 是多少？",
-    "ground_truth": "50"
+    "input": "10 of the Coolest Cars Ever Made & 10 That Nobody Cares About",
+    "ground_truth": "0"
   }
 ]
 ```
 
-### JSONL 格式
+### JSONL 格式示例
+
 ```jsonl
-{"input": "计算 2+3 等于多少？", "ground_truth": "5"}
-{"input": "10 乘以 5 是多少？", "ground_truth": "50"}
+{"input": "Daily life in RAJASTHAN, INDIA 🇮🇳- CITY vs RURAL", "ground_truth": "1"}
+{"input": "10 of the Coolest Cars Ever Made & 10 That Nobody Cares About", "ground_truth": "0"}
 ```
 
 ## 项目结构
@@ -171,7 +198,10 @@ autoprompt-langgraph/
 │   ├── style.css          # 样式文件
 │   └── script.js          # 前端脚本
 ├── uploads/               # 上传文件目录（自动创建）
-├── example_dataset.csv    # 示例数据集
+├── example_data/          # 示例数据目录
+│   ├── example_dataset.csv # 示例数据集
+│   └── example_prompt.txt  # 示例 prompt
+├── .env.example           # 环境变量配置示例文件
 ├── requirements.txt       # 依赖包
 └── README.md              # 说明文档
 ```
@@ -192,10 +222,22 @@ autoprompt-langgraph/
 
 ## 示例 Prompt
 
+项目提供了示例 prompt 在 `example_data/example_prompt.txt`，这是一个文本分类任务的 prompt：
+
 ```
-你是一个数学计算助手。请根据用户的问题，计算出正确的答案。
-只返回数字结果，不要包含其他文字。
+你是一个文本分类专家。你的任务是根据新闻标题headline预测其 Typography 类别是否为标题党
+
+输入：一个新闻标题
+输出：0 或 1（只返回数字，不要包含其他文字, 1 为标题党）
+
+请仔细分析标题的内容、风格和特征，然后给出分类结果。
 ```
+
+**使用示例数据测试**：
+1. 上传 `example_data/example_dataset.csv` 作为数据集
+2. 复制 `example_data/example_prompt.txt` 中的内容作为原始 prompt
+3. 设置迭代次数（建议 3-5 次）
+4. 点击"开始优化"进行测试
 
 ## 许可证
 
