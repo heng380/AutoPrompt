@@ -2,6 +2,26 @@
 
 基于 LangGraph 的自动 Prompt 优化系统，使用 Flask 提供 Web 界面。
 
+## 呈现效果
+
+### 1. 系统主界面
+
+![系统主界面](docs/images/interface.png)
+
+系统主界面包含数据集上传、Prompt 输入、参数设置等功能，优化完成后会显示准确率指标和变化趋势图。
+
+### 2. Prompt 优化对比
+
+![Prompt 优化对比](docs/images/prompt_comparison.png)
+
+系统会自动优化 Prompt，左侧显示原始 Prompt，右侧显示优化后的详细 Prompt（包含分析步骤、判断标准、示例等）。
+
+### 3. 优化历史详情
+
+![优化历史详情](docs/images/history_detail.png)
+
+通过下拉框可以选择查看任意轮次的详细信息，包括当前 Prompt、所有预测结果（正确/错误标记）以及改进建议。
+
 ## 功能特性
 
 - 📁 上传数据集文件（CSV/JSON/JSONL）
@@ -197,6 +217,11 @@ autoprompt-langgraph/
 ├── static/                # 静态文件
 │   ├── style.css          # 样式文件
 │   └── script.js          # 前端脚本
+├── docs/                  # 文档目录
+│   └── images/            # 图片资源
+│       ├── interface.png           # 系统主界面截图
+│       ├── prompt_comparison.png   # Prompt 对比图
+│       └── history_detail.png      # 优化历史详情图
 ├── uploads/               # 上传文件目录（自动创建）
 ├── example_data/          # 示例数据目录
 │   ├── example_dataset.csv # 示例数据集
