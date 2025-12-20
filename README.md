@@ -219,9 +219,9 @@ autoprompt-langgraph/
 │   └── script.js          # 前端脚本
 ├── docs/                  # 文档目录
 │   └── images/            # 图片资源
-│       ├── interface.png           # 系统主界面截图
-│       ├── prompt_comparison.png   # Prompt 对比图
-│       └── history_detail.png      # 优化历史详情图
+│       ├── image.png              # 系统主界面截图
+│       ├── image2.png             # Prompt 对比图
+│       └── image3.png             # 优化历史详情图
 ├── uploads/               # 上传文件目录（自动创建）
 ├── example_data/          # 示例数据目录
 │   ├── example_dataset.csv # 示例数据集
