@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoPrompt 优化系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 AutoPrompt 优化系统</h1>
+            <p class="subtitle">基于 LangGraph 的自动 Prompt 优化工具</p>
+        </header>
+
+        <!-- 输入区域 -->
+        <div class="input-section">
+            <div class="card">
+                <h2>1. 上传数据集</h2>
+                <div class="upload-area" id="uploadArea">
+                    <input type="file" id="fileInput" accept=".csv,.json,.jsonl" style="display: none;">
+                    <div class="upload-placeholder" id="uploadPlaceholder">
+                        <span class="upload-icon">📁</span>
+                        <p>点击或拖拽文件到此处上传</p>
+                        <p class="upload-hint">支持 CSV、JSON、JSONL 格式</p>
+                    </div>
+                    <div class="upload-info" id="uploadInfo" style="display: none;">
+                        <p><strong>文件名:</strong> <span id="fileName"></span></p>
+                        <p><strong>数据量:</strong> <span id="fileSize"></span> 条</p>
+                        <button class="btn-secondary" onclick="clearUpload()">重新上传</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>2. 输入原始 Prompt</h2>
+                <textarea 
+                    id="promptInput" 
+                    placeholder="请输入你的原始 prompt..."
+                    rows="8"
+                ></textarea>
+            </div>
+
+            <div class="card">
+                <h2>3. 设置参数</h2>
+                <div class="form-group">
+                    <label for="maxIterations">最大迭代轮次:</label>
+                    <input 
+                        type="number" 
+                        id="maxIterations" 
+                        min="1" 
+                        max="20" 
+                        value="5"
+                    >
+                </div>
+                <button class="btn-primary" id="optimizeBtn" onclick="startOptimization()">
+                    开始优化
+                </button>
+            </div>
+        </div>
+
+        <!-- 结果区域 -->
+        <div id="resultArea">
+            <div class="empty-state">
+                <p>👆 请先上传数据集并输入 prompt，然后点击"开始优化"</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
+
