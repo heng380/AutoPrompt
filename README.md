@@ -6,19 +6,19 @@
 
 ### 1. 系统主界面
 
-![系统主界面](docs/images/image.png)
+<img src="docs/images/image.png" alt="系统主界面" width="50%">
 
 系统主界面包含数据集上传、Prompt 输入、参数设置等功能，优化完成后会显示准确率指标和变化趋势图。
 
 ### 2. Prompt 优化对比
 
-![Prompt 优化对比](docs/images/image2.png)
+<img src="docs/images/image2.png" alt="Prompt 优化对比" width="50%">
 
 系统会自动优化 Prompt，左侧显示原始 Prompt，右侧显示优化后的详细 Prompt（包含分析步骤、判断标准、示例等）。
 
 ### 3. 优化历史详情
 
-![优化历史详情](docs/images/image3.png)
+<img src="docs/images/image3.png" alt="优化历史详情" width="50%">
 
 通过下拉框可以选择查看任意轮次的详细信息，包括当前 Prompt、所有预测结果（正确/错误标记）以及改进建议。
 
