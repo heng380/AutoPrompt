@@ -189,6 +189,16 @@ function displayResults(data) {
                 </div>
             </div>
 
+            <!-- 优化经验（Memory） -->
+            ${data.memory_experiences && data.memory_experiences.trim() ? `
+            <div class="card">
+                <h2>📚 累积优化经验</h2>
+                <div class="memory-experiences">
+                    <div class="prompt-box" style="white-space: pre-wrap; max-height: 500px; overflow-y: auto;">${escapeHtml(data.memory_experiences)}</div>
+                </div>
+            </div>
+            ` : ''}
+
             <!-- 优化历史（带下拉筛选） -->
             <div class="card">
                 <h2>优化历史详情</h2>

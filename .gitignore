@@ -8,6 +8,7 @@ venv/
 ENV/
 .venv
 uploads/
+experiments/
 *.log
 .env
 .DS_Store

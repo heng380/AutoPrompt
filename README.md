@@ -27,11 +27,14 @@
 - 📁 上传数据集文件（CSV/JSON/JSONL）
 - ✍️ 输入原始 Prompt
 - ⚙️ 设置最大迭代轮次
-- 🤖 三个 Agent 协作优化：
+- 🤖 四个 Agent 协作优化：
   1. **预测 Agent**: 根据数据集和当前 prompt 进行预测
   2. **分析 Agent**: 分析错误案例并给出修改意见
-  3. **改写 Agent**: 根据分析结果改写 Prompt
+  3. **改写 Agent**: 根据分析结果和历史经验改写 Prompt
+  4. **记忆 Agent**: 从 prompt 更改和准确率变化中总结经验，形成可复用的优化知识库
 - 🔄 自动循环优化直到达到最大迭代次数或所有预测正确
+- 🧠 **智能记忆机制**：每次优化都会总结通用经验，并应用于后续优化过程
+- 📂 **实验隔离**：每次任务自动创建独立的实验文件夹，不同任务互不干扰
 
 ## 工作流程
 
@@ -42,12 +45,34 @@
   ↓
 [分析 Agent] → 分析错误案例，给出改进建议
   ↓
-[改写 Agent] → 根据建议改写 prompt
+[改写 Agent] → 根据建议和历史经验改写 prompt
+  ↓
+[记忆 Agent] → 从 prompt 更改和准确率变化中总结经验
   ↓
 判断是否继续？
   ├─ 是 → 增加迭代次数 → 回到预测 Agent
   └─ 否 → 结束，返回优化后的 prompt
 ```
+
+### Memory 机制说明
+
+系统引入了 **Memory Agent（记忆 Agent）**，它会在每次迭代后：
+
+1. **总结经验**：分析 prompt 的更改内容、准确率变化趋势、具体案例的变化情况
+2. **生成经验文档**：将总结的经验保存到独立的实验文件夹中
+3. **应用经验**：在后续的改写过程中，Rewrite Agent 会参考这些历史经验来优化 prompt
+
+**经验总结包含**：
+- 📊 迭代轮次和准确率变化趋势（上升/下降）
+- 📝 Prompt 的具体更改内容（通过 diff 展示）
+- 🎯 案例变化分析（哪些案例从错误变正确，哪些从正确变错误）
+- 💡 后续优化方向的建议
+- 🔑 可复用的优化原则
+
+**实验隔离**：
+- 每次优化任务会自动生成唯一的 `experiment_id`
+- 每个任务的经验文件保存在 `experiments/{experiment_id}/memory_experiences.txt`
+- 不同任务之间的经验互不干扰，便于对比和管理
 
 ## 安装
 
@@ -155,7 +180,14 @@ python app.py
    - 系统会自动进行多轮优化
    - 显示准确率变化折线图
    - 显示最终优化后的 prompt（与原始 prompt 对比）
+   - 显示累积的优化经验（Memory Agent 总结的经验）
    - 通过下拉框查看每轮迭代的详细结果（prompt、预测结果、改进建议）
+   - 系统会返回 `experiment_id`，可用于追踪本次实验
+
+5. **查看经验文件**
+   - 每次任务的经验总结保存在 `experiments/{experiment_id}/memory_experiences.txt`
+   - 经验文件包含了详细的优化过程记录和通用原则
+   - 可以在前端界面直接查看累积的经验内容
 
 ## 数据集格式示例
 
@@ -211,7 +243,8 @@ autoprompt-langgraph/
 │   ├── __init__.py        # 模块初始化
 │   ├── prediction_agent.py # 预测 Agent
 │   ├── analysis_agent.py   # 分析 Agent
-│   └── rewrite_agent.py   # 改写 Agent
+│   ├── rewrite_agent.py   # 改写 Agent
+│   └── memory_agent.py    # 记忆 Agent（总结经验）
 ├── templates/             # HTML 模板
 │   └── index.html         # 主页面
 ├── static/                # 静态文件
@@ -222,6 +255,9 @@ autoprompt-langgraph/
 │       ├── image.png              # 系统主界面截图
 │       ├── image2.png             # Prompt 对比图
 │       └── image3.png             # 优化历史详情图
+├── experiments/           # 实验数据目录（自动创建）
+│   └── {experiment_id}/   # 每次任务的独立文件夹
+│       └── memory_experiences.txt # 经验总结文件
 ├── uploads/               # 上传文件目录（自动创建）
 ├── example_data/          # 示例数据目录
 │   ├── example_dataset.csv # 示例数据集
@@ -244,6 +280,8 @@ autoprompt-langgraph/
 2. 优化过程可能需要较长时间，取决于数据集大小和迭代次数
 3. 建议先用小数据集测试
 4. 确保数据集包含 `ground_truth` 字段用于评估
+5. 每次任务的经验文件会保存在 `experiments/` 目录下，目录会自动创建
+6. Memory Agent 会在第二次迭代及以后才开始总结经验（第一次迭代没有历史数据可对比）
 
 ## 示例 Prompt
 

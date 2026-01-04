@@ -3,6 +3,7 @@ Flask 主应用：提供 Web 界面
 """
 import os
 import json
+import uuid
 from flask import Flask, render_template, request, jsonify, session
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -85,12 +86,16 @@ def optimize_prompt():
         if len(dataset) == 0:
             return jsonify({'error': '数据集为空'}), 400
         
+        # 生成实验ID
+        experiment_id = str(uuid.uuid4())
+        
         # 创建并运行优化工作流
-        graph = AutoPromptGraph()
+        graph = AutoPromptGraph(experiment_id=experiment_id)
         result = graph.run(
             original_prompt=original_prompt,
             dataset=dataset,
-            max_iterations=max_iterations
+            max_iterations=max_iterations,
+            experiment_id=experiment_id
         )
         
         # 计算最终准确率
@@ -100,6 +105,7 @@ def optimize_prompt():
         
         return jsonify({
             'success': True,
+            'experiment_id': experiment_id,  # 返回实验ID
             'final_prompt': result['final_prompt'],
             'original_prompt': original_prompt,
             'accuracy': accuracy,
@@ -108,7 +114,8 @@ def optimize_prompt():
             'iterations': result['iterations'],
             'history': result['history'],
             'final_results': final_results,  # 返回所有最终结果
-            'all_iteration_results': result.get('all_iteration_results', [])  # 包含所有轮次的详细结果
+            'all_iteration_results': result.get('all_iteration_results', []),  # 包含所有轮次的详细结果
+            'memory_experiences': result.get('memory_experiences', '')  # 包含累积的经验
         })
     except Exception as e:
         return jsonify({'error': f'优化过程出错: {str(e)}'}), 500
