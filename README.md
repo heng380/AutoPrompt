@@ -12,7 +12,7 @@
 
 ### 2. Prompt 优化对比
 
-<img src="docs/images/image2.png" alt="Prompt 优化对比" width="50%">
+<img src="docs/images/prompt.png" alt="Prompt 优化对比" width="50%">
 
 系统会自动优化 Prompt，左侧显示原始 Prompt，右侧显示优化后的详细 Prompt（包含分析步骤、判断标准、示例等）。
 
