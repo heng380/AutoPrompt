@@ -1,3 +1,36 @@
+// 页面加载时初始化默认数据
+document.addEventListener('DOMContentLoaded', function() {
+    loadDefaultData();
+});
+
+// 加载默认数据集和 prompt
+function loadDefaultData() {
+    fetch('/default_data')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 设置默认 prompt
+                const promptInput = document.getElementById('promptInput');
+                if (promptInput && data.prompt) {
+                    promptInput.value = data.prompt;
+                }
+                
+                // 显示默认数据集信息
+                if (data.dataset) {
+                    document.getElementById('fileName').textContent = data.dataset.filename;
+                    document.getElementById('fileSize').textContent = data.dataset.size;
+                    uploadPlaceholder.style.display = 'none';
+                    uploadInfo.style.display = 'block';
+                }
+            } else {
+                console.warn('加载默认数据失败:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('加载默认数据出错:', error);
+        });
+}
+
 // 文件上传处理
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
@@ -68,6 +101,162 @@ function clearUpload() {
     });
 }
 
+// 日志相关变量
+let currentSessionId = null;
+let eventSource = null;
+let logCheckInterval = null;
+
+function addLogEntry(logEntry) {
+    const logContent = document.getElementById('logContent');
+    if (!logContent) return;
+    
+    const logLine = document.createElement('div');
+    logLine.className = `log-line log-${logEntry.level || 'info'}`;
+    
+    // 解析并高亮日志内容
+    let message = escapeHtml(logEntry.message || '');
+    
+    // 检测是否是迭代分隔线
+    const isIterationSeparator = /─{10,}.*迭代.*─{10,}/.test(message);
+    
+    if (isIterationSeparator) {
+        // 迭代分隔线样式
+        logLine.className = 'log-line log-iteration-separator';
+        // 提取迭代号并高亮
+        message = message.replace(/(迭代 \d+)/g, '<span class="log-iteration-number">$1</span>');
+        logLine.innerHTML = `<span class="log-message">${message}</span>`;
+    } else {
+        // 高亮 [步骤名称] 部分
+        message = message.replace(/\[([^\]]+)\]/g, '<span class="log-step">[$1]</span>');
+        
+        // 高亮 ✓ 和 ✗
+        message = message.replace(/✓/g, '<span class="log-success">✓</span>');
+        message = message.replace(/✗/g, '<span class="log-error">✗</span>');
+        
+        // 高亮数字和百分比
+        message = message.replace(/(\d+(?:\.\d+)?%)/g, '<span class="log-number">$1</span>');
+        message = message.replace(/(\d+\/\d+)/g, '<span class="log-number">$1</span>');
+        
+        logLine.innerHTML = `
+            <span class="log-timestamp">[${logEntry.timestamp || ''}]</span>
+            <span class="log-message">${message}</span>
+        `;
+    }
+    
+    logContent.appendChild(logLine);
+    
+    // 自动滚动到底部（使用多种方式确保滚动生效）
+    const scrollToBottom = () => {
+        const maxScroll = logContent.scrollHeight - logContent.clientHeight;
+        logContent.scrollTop = maxScroll > 0 ? maxScroll : 0;
+    };
+    
+    // 立即尝试滚动
+    scrollToBottom();
+    
+    // 使用 requestAnimationFrame 确保 DOM 更新后再滚动
+    requestAnimationFrame(() => {
+        scrollToBottom();
+    });
+    
+    // 使用 setTimeout 作为备用，确保内容渲染完成
+    setTimeout(scrollToBottom, 0);
+}
+
+function startLogStream(sessionId) {
+    // 清空日志窗口
+    const logContent = document.getElementById('logContent');
+    if (logContent) {
+        logContent.innerHTML = '';
+    }
+    
+    // 显示日志窗口
+    const logWindow = document.getElementById('logWindow');
+    if (logWindow) {
+        logWindow.style.display = 'block';
+    }
+    
+    // 关闭之前的连接
+    if (eventSource) {
+        eventSource.close();
+    }
+    
+    // 创建新的 SSE 连接
+    eventSource = new EventSource(`/logs/${sessionId}`);
+    
+    eventSource.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'completed') {
+                eventSource.close();
+                checkOptimizationResult(sessionId);
+            } else {
+                addLogEntry(data);
+            }
+        } catch (e) {
+            console.error('Error parsing log data:', e);
+        }
+    };
+    
+    eventSource.onerror = function(event) {
+        console.error('SSE error:', event);
+        // 如果连接关闭，开始轮询结果
+        if (eventSource.readyState === EventSource.CLOSED) {
+            checkOptimizationResult(sessionId);
+        }
+    };
+    
+    // 同时设置轮询作为备用
+    logCheckInterval = setInterval(() => {
+        checkOptimizationResult(sessionId);
+    }, 2000);
+}
+
+function checkOptimizationResult(sessionId) {
+    fetch(`/result/${sessionId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.completed === false) {
+                // 还在进行中，继续等待
+                return;
+            }
+            
+            // 完成，停止轮询
+            if (logCheckInterval) {
+                clearInterval(logCheckInterval);
+                logCheckInterval = null;
+            }
+            
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            
+            const optimizeBtn = document.getElementById('optimizeBtn');
+            optimizeBtn.disabled = false;
+            optimizeBtn.textContent = '开始优化';
+            
+            if (data.error) {
+                const resultArea = document.getElementById('resultArea');
+                resultArea.innerHTML = `
+                    <div class="error-message">
+                        <strong>错误:</strong> ${data.error}
+                    </div>
+                `;
+                addLogEntry({ message: `错误: ${data.error}`, level: 'error', timestamp: new Date().toLocaleTimeString() });
+                return;
+            }
+            
+            if (data.success) {
+                displayResults(data);
+                addLogEntry({ message: '✅ 优化任务完成！', level: 'success', timestamp: new Date().toLocaleTimeString() });
+            }
+        })
+        .catch(error => {
+            console.error('Error checking result:', error);
+        });
+}
+
 // 开始优化
 function startOptimization() {
     const prompt = document.getElementById('promptInput').value.trim();
@@ -90,6 +279,9 @@ function startOptimization() {
             <p style="color: #999; font-size: 0.9em; margin-top: 10px;">
                 这可能需要几分钟时间，请耐心等待
             </p>
+            <p style="color: #667eea; font-size: 0.9em; margin-top: 10px;">
+                💡 请查看下方的实时日志了解优化进度
+            </p>
         </div>
     `;
 
@@ -105,10 +297,9 @@ function startOptimization() {
     })
     .then(response => response.json())
     .then(data => {
-        optimizeBtn.disabled = false;
-        optimizeBtn.textContent = '开始优化';
-
         if (data.error) {
+            optimizeBtn.disabled = false;
+            optimizeBtn.textContent = '开始优化';
             resultArea.innerHTML = `
                 <div class="error-message">
                     <strong>错误:</strong> ${data.error}
@@ -116,8 +307,11 @@ function startOptimization() {
             `;
             return;
         }
-
-        displayResults(data);
+        
+        if (data.session_id) {
+            currentSessionId = data.session_id;
+            startLogStream(data.session_id);
+        }
     })
     .catch(error => {
         console.error('Error:', error);

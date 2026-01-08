@@ -479,3 +479,130 @@ textarea:focus {
     border-left: 4px solid #3c3;
 }
 
+/* 日志窗口样式 */
+.log-window {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.log-window h2 {
+    margin-bottom: 15px;
+}
+
+.log-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 15px;
+    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #d4d4d4;
+    min-height: 200px;
+    max-height: 500px;
+    background: #1e1e1e;
+    border-radius: 8px;
+    word-wrap: break-word; /* 允许长文本换行 */
+    scrollbar-width: thin; /* Firefox 滚动条样式 */
+    scrollbar-color: #555 #2d2d2d; /* Firefox 滚动条颜色 */
+}
+
+.log-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.log-content::-webkit-scrollbar-track {
+    background: #2d2d2d;
+    border-radius: 4px;
+}
+
+.log-content::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+    min-height: 20px;
+}
+
+.log-content::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
+.log-line {
+    margin-bottom: 8px;
+    padding: 4px 0;
+    word-wrap: break-word;
+}
+
+.log-timestamp {
+    color: #808080;
+    margin-right: 8px;
+    font-size: 0.9em;
+}
+
+.log-message {
+    color: inherit;
+}
+
+/* 日志级别颜色 */
+.log-line.log-info {
+    color: #d4d4d4;
+}
+
+.log-line.log-success {
+    color: #4ec9b0;
+}
+
+.log-line.log-warning {
+    color: #ce9178;
+}
+
+.log-line.log-error {
+    color: #f48771;
+}
+
+/* 高亮样式 */
+.log-step {
+    color: #569cd6;
+    font-weight: 600;
+}
+
+.log-success {
+    color: #4ec9b0;
+    font-weight: bold;
+}
+
+.log-error {
+    color: #f48771;
+    font-weight: bold;
+}
+
+.log-number {
+    color: #b5cea8;
+    font-weight: 600;
+}
+
+/* 迭代分隔线样式 */
+.log-iteration-separator {
+    background: rgba(86, 156, 214, 0.1);
+    border-top: 2px solid #569cd6;
+    border-bottom: 2px solid #569cd6;
+    padding: 12px 15px;
+    margin: 15px 0;
+    text-align: center;
+    font-weight: bold;
+    color: #569cd6;
+}
+
+.log-iteration-number {
+    color: #4ec9b0;
+    font-size: 1.1em;
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(78, 201, 176, 0.5);
+}
+
+@media (max-width: 768px) {
+    .log-content {
+        max-height: 300px;
+    }
+}
+
