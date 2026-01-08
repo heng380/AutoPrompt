@@ -185,14 +185,17 @@ class AutoPromptGraph:
         # 只在首次分析时记录历史（验证失败后重新分析不重复记录）
         if not has_verification_feedback:
             # 记录历史（包含每轮的详细预测结果）
-            state['history'].append({
+            history_entry = {
                 'iteration': state['iteration'],
                 'prompt': state['current_prompt'],
                 'error_count': analysis.get('error_count', 0),
                 'total_count': analysis.get('total_count', 0),
                 'suggestions': analysis.get('suggestions', ''),
                 'results': state['results']  # 保存每轮的详细预测结果
-            })
+            }
+            state['history'].append(history_entry)
+            _log_collector.log(f"[迭代 {state['iteration']}] [系统] 已记录历史，当前 history 长度: {len(state['history'])}", level="info")
+            print(f"[迭代 {state['iteration']}] [系统] 已记录历史，当前 history 长度: {len(state['history'])}")
         
         return state
     
@@ -456,8 +459,11 @@ class AutoPromptGraph:
             'suggestions': f"最终验证：准确率 {correct_count}/{total_count} ({correct_count/total_count*100:.2f}%)"
         }
         
+        # 记录最终验证的历史（只有在达到最大迭代次数时才会执行到这里）
+        # 使用一个特殊的 iteration 号，避免与正常轮次重复
+        final_iteration = state['iteration'] + 1
         state['history'].append({
-            'iteration': state['iteration'] + 1,  # 标记为最终验证轮次
+            'iteration': final_iteration,  # 标记为最终验证轮次（通常是 max_iterations + 1）
             'prompt': state['current_prompt'],  # 最终优化后的 prompt
             'error_count': final_analysis['error_count'],
             'total_count': final_analysis['total_count'],
@@ -465,6 +471,8 @@ class AutoPromptGraph:
             'results': results,
             'is_final': True  # 标记为最终验证
         })
+        _log_collector.log(f"[最终验证] [系统] 已记录最终验证历史，总 history 长度: {len(state['history'])}", level="info")
+        print(f"[最终验证] [系统] 已记录最终验证历史，总 history 长度: {len(state['history'])}")
         
         state['analysis'] = final_analysis
         
@@ -520,6 +528,16 @@ class AutoPromptGraph:
         _log_collector.log("=" * 60, level="info")
         
         final_state = self.graph.invoke(initial_state, config=config)
+        
+        # 打印 history 信息用于调试
+        _log_collector.log(f"[系统] 优化完成，总 history 记录数: {len(final_state['history'])}", level="info")
+        for i, h in enumerate(final_state['history']):
+            acc = ((h.get('total_count', 0) - h.get('error_count', 0)) / h.get('total_count', 1) * 100) if h.get('total_count', 0) > 0 else 0
+            _log_collector.log(f"[系统] History[{i}]: 迭代 {h.get('iteration', 'N/A')}, 准确率: {acc:.1f}%, is_final: {h.get('is_final', False)}", level="info")
+        print(f"[系统] 优化完成，总 history 记录数: {len(final_state['history'])}")
+        for i, h in enumerate(final_state['history']):
+            acc = ((h.get('total_count', 0) - h.get('error_count', 0)) / h.get('total_count', 1) * 100) if h.get('total_count', 0) > 0 else 0
+            print(f"  History[{i}]: 迭代 {h.get('iteration', 'N/A')}, 准确率: {acc:.1f}%, is_final: {h.get('is_final', False)}")
         
         return {
             'final_prompt': final_state['current_prompt'],

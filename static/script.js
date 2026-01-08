@@ -420,10 +420,58 @@ function prepareChartData(history) {
     const labels = [];
     const accuracies = [];
     
-    history.forEach((item) => {
+    if (!history || history.length === 0) {
+        console.warn('History is empty or undefined');
+        return { labels, accuracies };
+    }
+    
+    console.log('原始 history 数据:', history.length, '项');
+    history.forEach((item, idx) => {
+        const acc = item.total_count > 0 ? ((item.total_count - item.error_count) / item.total_count * 100) : 0;
+        console.log(`  [${idx}] 迭代 ${item.iteration}, 准确率: ${acc.toFixed(1)}%, is_final: ${item.is_final || false}, total: ${item.total_count}, error: ${item.error_count}`);
+    });
+    
+    // 按 iteration 排序，确保顺序正确
+    const sortedHistory = [...history].sort((a, b) => {
+        const iterA = a.iteration || 0;
+        const iterB = b.iteration || 0;
+        return iterA - iterB;
+    });
+    
+    // 如果存在最终验证记录（is_final=true），且其 iteration 与最后一轮相同，则用最终验证替换最后一轮
+    // 否则保留所有记录（包括最终验证作为额外的一轮）
+    const finalHistory = [];
+    const seenIterations = new Map(); // 使用 Map 来跟踪每个 iteration 的最后记录
+    
+    sortedHistory.forEach((item) => {
+        const iter = item.iteration || 0;
+        // 如果是最终验证，且该 iteration 已存在，则替换；否则添加
+        if (item.is_final) {
+            seenIterations.set(iter, item);
+        } else {
+            // 如果该 iteration 还没有记录，或者已有记录但不是最终验证，则添加/更新
+            if (!seenIterations.has(iter)) {
+                seenIterations.set(iter, item);
+            }
+        }
+    });
+    
+    // 将 Map 转换为数组并按 iteration 排序
+    const chartHistory = Array.from(seenIterations.values()).sort((a, b) => {
+        return (a.iteration || 0) - (b.iteration || 0);
+    });
+    
+    console.log('处理后的 history 数据（用于图表）:', chartHistory.length, '项');
+    chartHistory.forEach((item, idx) => {
+        const acc = item.total_count > 0 ? ((item.total_count - item.error_count) / item.total_count * 100) : 0;
+        console.log(`  [${idx}] 迭代 ${item.iteration}, 准确率: ${acc.toFixed(1)}%, is_final: ${item.is_final || false}`);
+    });
+    
+    chartHistory.forEach((item) => {
         const correctCount = item.total_count - item.error_count;
         const iterAccuracy = item.total_count > 0 ? ((correctCount / item.total_count) * 100) : 0;
-        labels.push(`迭代 ${item.iteration}`);
+        const label = item.is_final ? `最终验证` : `迭代 ${item.iteration}`;
+        labels.push(label);
         accuracies.push(parseFloat(iterAccuracy.toFixed(2)));
     });
     

@@ -98,31 +98,37 @@ class RewriteAgent:
                 idx = new_prompt.find(keyword)
                 if idx != -1:
                     # 找到该关键词之前的内容
-                    before = new_prompt[:idx]
+                    before = new_prompt[:idx].rstrip()
                     
-                    # 向上查找最后一个分隔线（---）或段落标记，作为截断点
-                    # 如果有关键字前有分隔线，保留到分隔线之后
-                    # 否则直接截断到关键字之前
+                    # 向上查找最后一个分隔线（---），如果存在则保留到分隔线处
+                    # 查找各种可能的分隔线格式
+                    separator_patterns = [
+                        '\n---\n',
+                        '\n\n---\n',
+                        '\n---',
+                        '\n\n---'
+                    ]
                     
-                    # 尝试找到最后一个分隔线
-                    last_separator_pos = -1
-                    for sep in ['\n---\n', '\n\n---\n', '\n---', '\n\n---']:
-                        pos = before.rfind(sep)
-                        if pos > last_separator_pos:
-                            last_separator_pos = pos
-                            break
+                    last_sep_pos = -1
+                    for pattern in separator_patterns:
+                        pos = before.rfind(pattern)
+                        if pos > last_sep_pos:
+                            last_sep_pos = pos
                     
-                    if last_separator_pos > 0:
-                        # 找到分隔线结束的位置
-                        # 分隔线格式可能是 "---\n" 或 "---"
-                        separator_line_end = before.find('\n', last_separator_pos + 1)
-                        if separator_line_end > 0:
-                            new_prompt = before[:separator_line_end].rstrip()
+                    if last_sep_pos > 0:
+                        # 找到分隔线，保留到分隔线结束
+                        # 查找分隔线后的换行
+                        after_sep = before[last_sep_pos:]
+                        newline_after_sep = after_sep.find('\n', len('---'))
+                        if newline_after_sep > 0:
+                            # 保留到分隔线后的第一个换行
+                            new_prompt = before[:last_sep_pos + len('---') + newline_after_sep].rstrip()
                         else:
-                            new_prompt = before.rstrip()
+                            # 如果分隔线后没有换行，保留到分隔线位置
+                            new_prompt = before[:last_sep_pos + len('---')].rstrip()
                     else:
                         # 如果没有找到分隔线，直接截断到关键词前
-                        new_prompt = before.rstrip()
+                        new_prompt = before
                     
                     # 只处理第一个找到的关键词
                     break
