@@ -321,6 +321,11 @@ class AutoPromptGraph:
             print(f"[迭代 {state['iteration']}] [验证] 接受此次改写，继续到下一轮")
             # 清除 pending_prompt，因为已经接受了新 prompt
             state['pending_prompt'] = None
+            # 清除 analysis 中的 verification_feedback，因为这是新的一轮，需要重新分析
+            if state.get('analysis'):
+                state['analysis'].pop('verification_feedback', None)
+                state['analysis'].pop('verification_result', None)
+                state['analysis'].pop('needs_rerun', None)
             return "accept"
         else:
             _log_collector.log(f"[迭代 {state['iteration']}] [验证] 拒绝此次改写，回滚并重新分析", level="warning")
@@ -398,6 +403,11 @@ class AutoPromptGraph:
     def _increment_iteration_node(self, state: AutoPromptState) -> AutoPromptState:
         """增加迭代次数节点"""
         state['iteration'] = state['iteration'] + 1
+        # 清除上一轮的 verification_feedback，确保新轮次能正确记录 history
+        if state.get('analysis'):
+            state['analysis'].pop('verification_feedback', None)
+            state['analysis'].pop('verification_result', None)
+            state['analysis'].pop('needs_rerun', None)
         return state
     
     def _should_continue(self, state: AutoPromptState) -> str:
@@ -539,10 +549,58 @@ class AutoPromptGraph:
             acc = ((h.get('total_count', 0) - h.get('error_count', 0)) / h.get('total_count', 1) * 100) if h.get('total_count', 0) > 0 else 0
             print(f"  History[{i}]: 迭代 {h.get('iteration', 'N/A')}, 准确率: {acc:.1f}%, is_final: {h.get('is_final', False)}")
         
+        # 计算最终准确率
+        final_results = final_state.get('results', [])
+        final_correct_count = sum(1 for r in final_results if r.get('is_correct', False))
+        final_total_count = len(final_results)
+        final_accuracy = (final_correct_count / final_total_count * 100) if final_total_count > 0 else 0.0
+        
+        # 查找历史最高准确率的记录（排除最终验证记录）
+        best_history = None
+        best_accuracy = 0.0
+        best_iteration = 0
+        
+        for h in final_state['history']:
+            if h.get('is_final', False):
+                continue  # 跳过最终验证记录
+            
+            acc = ((h.get('total_count', 0) - h.get('error_count', 0)) / h.get('total_count', 1) * 100) if h.get('total_count', 0) > 0 else 0
+            if acc > best_accuracy:
+                best_accuracy = acc
+                best_history = h
+                best_iteration = h.get('iteration', 0)
+        
+        # 如果最终准确率未达到100%，且历史最高准确率更高，使用历史最高准确率的 prompt
+        final_prompt = final_state['current_prompt']
+        prompt_source = "最终轮次"
+        prompt_iteration = final_state['iteration']
+        
+        if final_accuracy < 100.0 and best_history and best_accuracy > final_accuracy:
+            final_prompt = best_history.get('prompt', final_state['current_prompt'])
+            prompt_source = "历史最高准确率"
+            prompt_iteration = best_iteration
+            _log_collector.log(f"[系统] 最终准确率 {final_accuracy:.1f}% 未达到 100%，使用第 {best_iteration} 轮的 prompt（准确率 {best_accuracy:.1f}%）", level="warning")
+            print(f"[系统] 最终准确率 {final_accuracy:.1f}% 未达到 100%，使用第 {best_iteration} 轮的 prompt（准确率 {best_accuracy:.1f}%）")
+        elif final_accuracy < 100.0 and best_history and best_accuracy == final_accuracy:
+            # 如果最终准确率等于历史最高，但未达到100%，也使用历史最高
+            final_prompt = best_history.get('prompt', final_state['current_prompt'])
+            prompt_source = "历史最高准确率"
+            prompt_iteration = best_iteration
+            _log_collector.log(f"[系统] 最终准确率 {final_accuracy:.1f}% 未达到 100%，使用第 {best_iteration} 轮的 prompt（准确率 {best_accuracy:.1f}%）", level="warning")
+            print(f"[系统] 最终准确率 {final_accuracy:.1f}% 未达到 100%，使用第 {best_iteration} 轮的 prompt（准确率 {best_accuracy:.1f}%）")
+        elif final_accuracy >= 100.0:
+            _log_collector.log(f"[系统] 最终准确率 {final_accuracy:.1f}% 达到 100%，使用最终轮次的 prompt", level="success")
+            print(f"[系统] 最终准确率 {final_accuracy:.1f}% 达到 100%，使用最终轮次的 prompt")
+        
         return {
-            'final_prompt': final_state['current_prompt'],
+            'final_prompt': final_prompt,
+            'final_prompt_source': prompt_source,  # 标记 prompt 来源：最终轮次 / 历史最高准确率
+            'final_prompt_iteration': prompt_iteration,  # prompt 对应的轮次
             'final_results': final_state['results'],
             'final_analysis': final_state['analysis'],
+            'final_accuracy': final_accuracy,  # 最终准确率
+            'best_accuracy': best_accuracy if best_history else final_accuracy,  # 历史最高准确率
+            'best_iteration': best_iteration if best_history else final_state['iteration'],  # 历史最高准确率对应的轮次
             'history': final_state['history'],
             'iterations': final_state['iteration'],
             'all_iteration_results': final_state['history'],  # 包含所有轮次的详细结果

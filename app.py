@@ -128,18 +128,23 @@ def optimize_prompt():
                     experiment_id=experiment_id
                 )
                 
-                # 计算最终准确率
+                # 计算最终准确率（使用 graph.run() 返回的准确率，或重新计算）
                 final_results = result['final_results']
                 correct_count = sum(1 for r in final_results if r.get('is_correct', False))
-                accuracy = correct_count / len(final_results) if final_results else 0
+                accuracy = result.get('final_accuracy', correct_count / len(final_results) * 100 if final_results else 0) / 100  # 转换为 0-1 范围
                 
                 with session_lock:
                     optimization_sessions[session_id] = {
                         'success': True,
                         'experiment_id': experiment_id,
                         'final_prompt': result['final_prompt'],
+                        'final_prompt_source': result.get('final_prompt_source', '最终轮次'),  # prompt 来源：最终轮次 / 历史最高准确率
+                        'final_prompt_iteration': result.get('final_prompt_iteration', result['iterations']),  # prompt 对应的轮次
                         'original_prompt': original_prompt,
                         'accuracy': accuracy,
+                        'final_accuracy': result.get('final_accuracy', accuracy * 100),  # 最终准确率（百分比）
+                        'best_accuracy': result.get('best_accuracy', accuracy * 100),  # 历史最高准确率（百分比）
+                        'best_iteration': result.get('best_iteration', result['iterations']),  # 历史最高准确率对应的轮次
                         'correct_count': correct_count,
                         'total_count': len(final_results),
                         'iterations': result['iterations'],

@@ -328,12 +328,54 @@ function startOptimization() {
 let accuracyChart = null;
 let currentHistoryData = null;
 
+/**
+ * 处理 history 数据，确保所有轮次都被正确显示
+ * 排除重复的最终验证记录，按 iteration 排序
+ */
+function processHistoryData(history) {
+    if (!history || history.length === 0) {
+        return [];
+    }
+    
+    // 按 iteration 排序
+    const sortedHistory = [...history].sort((a, b) => {
+        const iterA = a.iteration || 0;
+        const iterB = b.iteration || 0;
+        return iterA - iterB;
+    });
+    
+    // 处理最终验证记录：如果存在最终验证记录（is_final=true），且其 iteration 与最后一轮相同，则用最终验证替换最后一轮
+    const finalHistory = [];
+    const seenIterations = new Map(); // 使用 Map 来跟踪每个 iteration 的最后记录
+    
+    sortedHistory.forEach((item) => {
+        const iter = item.iteration || 0;
+        // 如果是最终验证，且该 iteration 已存在，则替换；否则添加
+        if (item.is_final) {
+            seenIterations.set(iter, item);
+        } else {
+            // 如果该 iteration 还没有记录，或者已有记录但不是最终验证，则添加/更新
+            if (!seenIterations.has(iter)) {
+                seenIterations.set(iter, item);
+            }
+        }
+    });
+    
+    // 将 Map 转换为数组并按 iteration 排序
+    return Array.from(seenIterations.values()).sort((a, b) => {
+        return (a.iteration || 0) - (b.iteration || 0);
+    });
+}
+
 function displayResults(data) {
     const accuracy = (data.accuracy * 100).toFixed(2);
-    currentHistoryData = data.history || [];
+    
+    // 处理 history 数据，确保所有轮次都被正确显示
+    const processedHistory = processHistoryData(data.history || []);
+    currentHistoryData = processedHistory;
     
     // 准备折线图数据
-    const chartData = prepareChartData(data.history || []);
+    const chartData = prepareChartData(processedHistory);
     
     const resultArea = document.getElementById('resultArea');
     resultArea.innerHTML = `
@@ -377,7 +419,10 @@ function displayResults(data) {
                         <div class="prompt-box">${escapeHtml(data.original_prompt)}</div>
                     </div>
                     <div class="prompt-item">
-                        <h3>优化后的 Prompt</h3>
+                        <h3>优化后的 Prompt${data.final_prompt_source ? ` <span style="color: #667eea; font-size: 0.8em; font-weight: normal;">(${data.final_prompt_source === '历史最高准确率' ? `第 ${data.final_prompt_iteration} 轮` : `第 ${data.final_prompt_iteration} 轮`})</span>` : ''}</h3>
+                        ${data.final_prompt_source === '历史最高准确率' ? `<div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 10px; margin-bottom: 10px; color: #856404; font-size: 0.9em;">
+                            ⚠️ 最终准确率未达到 100%，已自动选择历史最高准确率（${data.best_accuracy ? data.best_accuracy.toFixed(1) : 'N/A'}%）对应的第 ${data.final_prompt_iteration} 轮 prompt
+                        </div>` : ''}
                         <div class="prompt-box">${escapeHtml(data.final_prompt)}</div>
                     </div>
                 </div>
@@ -400,11 +445,12 @@ function displayResults(data) {
                     <label for="iterationSelect">选择轮次查看详情：</label>
                     <select id="iterationSelect" onchange="showIterationDetail(this.value)">
                         <option value="">-- 选择轮次 --</option>
-                        ${data.history ? data.history.map((item, idx) => {
+                        ${processedHistory.map((item, idx) => {
                             const correctCount = item.total_count - item.error_count;
                             const iterAccuracy = item.total_count > 0 ? ((correctCount / item.total_count) * 100).toFixed(2) : '0.00';
-                            return `<option value="${idx}">迭代 ${item.iteration} - 准确率: ${iterAccuracy}%</option>`;
-                        }).join('') : ''}
+                            const label = item.is_final ? `最终验证` : `迭代 ${item.iteration}`;
+                            return `<option value="${idx}">${label} - 准确率: ${iterAccuracy}%</option>`;
+                        }).join('')}
                     </select>
                 </div>
                 <div id="iterationDetail" class="iteration-detail"></div>
@@ -425,49 +471,15 @@ function prepareChartData(history) {
         return { labels, accuracies };
     }
     
-    console.log('原始 history 数据:', history.length, '项');
+    // history 数据已经在 displayResults 中通过 processHistoryData 处理过了
+    // 这里直接使用即可
+    console.log('用于图表的 history 数据:', history.length, '项');
     history.forEach((item, idx) => {
-        const acc = item.total_count > 0 ? ((item.total_count - item.error_count) / item.total_count * 100) : 0;
-        console.log(`  [${idx}] 迭代 ${item.iteration}, 准确率: ${acc.toFixed(1)}%, is_final: ${item.is_final || false}, total: ${item.total_count}, error: ${item.error_count}`);
-    });
-    
-    // 按 iteration 排序，确保顺序正确
-    const sortedHistory = [...history].sort((a, b) => {
-        const iterA = a.iteration || 0;
-        const iterB = b.iteration || 0;
-        return iterA - iterB;
-    });
-    
-    // 如果存在最终验证记录（is_final=true），且其 iteration 与最后一轮相同，则用最终验证替换最后一轮
-    // 否则保留所有记录（包括最终验证作为额外的一轮）
-    const finalHistory = [];
-    const seenIterations = new Map(); // 使用 Map 来跟踪每个 iteration 的最后记录
-    
-    sortedHistory.forEach((item) => {
-        const iter = item.iteration || 0;
-        // 如果是最终验证，且该 iteration 已存在，则替换；否则添加
-        if (item.is_final) {
-            seenIterations.set(iter, item);
-        } else {
-            // 如果该 iteration 还没有记录，或者已有记录但不是最终验证，则添加/更新
-            if (!seenIterations.has(iter)) {
-                seenIterations.set(iter, item);
-            }
-        }
-    });
-    
-    // 将 Map 转换为数组并按 iteration 排序
-    const chartHistory = Array.from(seenIterations.values()).sort((a, b) => {
-        return (a.iteration || 0) - (b.iteration || 0);
-    });
-    
-    console.log('处理后的 history 数据（用于图表）:', chartHistory.length, '项');
-    chartHistory.forEach((item, idx) => {
         const acc = item.total_count > 0 ? ((item.total_count - item.error_count) / item.total_count * 100) : 0;
         console.log(`  [${idx}] 迭代 ${item.iteration}, 准确率: ${acc.toFixed(1)}%, is_final: ${item.is_final || false}`);
     });
     
-    chartHistory.forEach((item) => {
+    history.forEach((item) => {
         const correctCount = item.total_count - item.error_count;
         const iterAccuracy = item.total_count > 0 ? ((correctCount / item.total_count) * 100) : 0;
         const label = item.is_final ? `最终验证` : `迭代 ${item.iteration}`;
