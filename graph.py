@@ -24,6 +24,7 @@ class AutoPromptState(TypedDict, total=False):
     memory_experiences: str   # 累积的经验文本
     verification_result: Dict[str, Any]  # 验证结果
     pending_prompt: str       # 待验证的改写后的 prompt（如果验证失败则回滚）
+    verification_threshold: float  # 验证阈值（0-1），解决率 >= threshold 时接受改写
 
 
 class AutoPromptGraph:
@@ -174,10 +175,12 @@ class AutoPromptGraph:
             analysis['verification_feedback'] = saved_verification_feedback
             analysis['verification_result'] = saved_verification_result
             # 在建议中加入验证反馈信息
+            verification_threshold = state.get('verification_threshold', 1.0)
+            threshold_percent = verification_threshold * 100
             analysis['suggestions'] = (
                 f"【验证反馈】{saved_verification_feedback}\n\n"
                 f"原改进建议：\n{analysis.get('suggestions', '')}\n\n"
-                f"请结合验证反馈，重新思考如何改进 prompt，确保能够解决至少一半的 badcase。"
+                f"请结合验证反馈，重新思考如何改进 prompt，确保能够解决至少 {threshold_percent:.0f}% 的 badcase。"
             )
         
         state['analysis'] = analysis
@@ -230,6 +233,11 @@ class AutoPromptGraph:
             memory_experiences = self.memory_agent.load_experiences()
             state['memory_experiences'] = memory_experiences
         
+        # 将验证阈值信息传递给 rewrite agent（用于生成提示信息）
+        verification_threshold = state.get('verification_threshold', 1.0)
+        if state.get('analysis'):
+            state['analysis']['verification_threshold'] = verification_threshold
+        
         new_prompt = self.rewrite_agent.rewrite(
             state['original_prompt'],
             state['analysis'],
@@ -272,9 +280,11 @@ class AutoPromptGraph:
         print(f"[迭代 {state['iteration']}] [验证] 需要验证 {len(badcases)} 个 badcase...")
         
         # 使用改写后的 prompt 验证 badcase
+        verification_threshold = state.get('verification_threshold', 1.0)  # 默认 100%
         verification_result = self.verifier_agent.verify(
             new_prompt=state['current_prompt'],
-            badcases=badcases
+            badcases=badcases,
+            threshold=verification_threshold
         )
         
         # 打印验证结果摘要
@@ -492,7 +502,7 @@ class AutoPromptGraph:
         
         return state
     
-    def run(self, original_prompt: str, dataset: List[Dict[str, Any]], max_iterations: int = 5, experiment_id: str = None) -> Dict[str, Any]:
+    def run(self, original_prompt: str, dataset: List[Dict[str, Any]], max_iterations: int = 5, experiment_id: str = None, verification_threshold: float = 1.0) -> Dict[str, Any]:
         """
         运行优化工作流
         
@@ -501,6 +511,7 @@ class AutoPromptGraph:
             dataset: 数据集
             max_iterations: 最大迭代轮次
             experiment_id: 实验ID（如果提供，会使用新的experiment_id创建MemoryAgent）
+            verification_threshold: 验证阈值（0-1），解决率 >= threshold 时接受改写，默认 1.0（100%）
             
         Returns:
             最终状态
@@ -521,7 +532,8 @@ class AutoPromptGraph:
             'previous_prompt': original_prompt,
             'memory_experiences': self.memory_agent.load_experiences(),
             'verification_result': {},
-            'pending_prompt': None
+            'pending_prompt': None,
+            'verification_threshold': verification_threshold
         }
         
         # 清空之前的日志

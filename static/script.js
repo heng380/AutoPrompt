@@ -261,9 +261,15 @@ function checkOptimizationResult(sessionId) {
 function startOptimization() {
     const prompt = document.getElementById('promptInput').value.trim();
     const maxIterations = parseInt(document.getElementById('maxIterations').value);
+    const verificationThreshold = parseFloat(document.getElementById('verificationThreshold').value) / 100; // 转换为 0-1 范围
 
     if (!prompt) {
         alert('请输入 prompt');
+        return;
+    }
+    
+    if (isNaN(verificationThreshold) || verificationThreshold < 0 || verificationThreshold > 1) {
+        alert('验证阈值必须在 0-100 之间');
         return;
     }
 
@@ -292,7 +298,8 @@ function startOptimization() {
         },
         body: JSON.stringify({
             prompt: prompt,
-            max_iterations: maxIterations
+            max_iterations: maxIterations,
+            verification_threshold: verificationThreshold
         })
     })
     .then(response => response.json())

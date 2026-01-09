@@ -54,6 +54,24 @@
                         value="5"
                     >
                 </div>
+                <div class="form-group">
+                    <label for="verificationThreshold">验证阈值 (%):</label>
+                    <input 
+                        type="number" 
+                        id="verificationThreshold" 
+                        min="0" 
+                        max="100" 
+                        step="1"
+                        value="100"
+                    >
+                    <div class="form-hint">
+                        <small>
+                            💡 验证阈值：每次改写后，系统会使用新 prompt 验证上一轮的 badcase（错误案例）。<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;只有当解决率 ≥ 阈值时，才会接受此次改写并进入下一轮。<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;建议值：50%（宽松）- 100%（严格，必须解决所有 badcase）
+                        </small>
+                    </div>
+                </div>
                 <button class="btn-primary" id="optimizeBtn" onclick="startOptimization()">
                     开始优化
                 </button>

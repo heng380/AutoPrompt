@@ -11,13 +11,14 @@ class VerifierAgent:
     def __init__(self):
         self.prediction_agent = PredictionAgent()
     
-    def verify(self, new_prompt: str, badcases: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def verify(self, new_prompt: str, badcases: List[Dict[str, Any]], threshold: float = 1.0) -> Dict[str, Any]:
         """
         验证改写后的 prompt 是否能解决目标 badcase
         
         Args:
             new_prompt: 改写后的新 prompt
             badcases: 上一轮预测中的错误案例列表（要解决的目标）
+            threshold: 验证阈值（0-1），解决率 >= threshold 时接受改写，默认 1.0（100%）
             
         Returns:
             包含验证结果的字典：
@@ -46,18 +47,19 @@ class VerifierAgent:
         total_count = len(badcases)
         solve_rate = solved_count / total_count if total_count > 0 else 0.0
         
-        # 判断是否接受：解决率 >= 50%
-        accepted = solve_rate >= 0.5
+        # 判断是否接受：解决率 >= threshold
+        accepted = solve_rate >= threshold
         
         # 生成反馈信息
+        threshold_percent = threshold * 100
         feedback_lines = [
             f"验证结果：解决了 {solved_count}/{total_count} 个 badcase（解决率 {solve_rate:.1%}）"
         ]
         
         if accepted:
-            feedback_lines.append(f"✓ 接受此次改写（解决率 >= 50%）")
+            feedback_lines.append(f"✓ 接受此次改写（解决率 >= {threshold_percent:.0f}%）")
         else:
-            feedback_lines.append(f"✗ 拒绝此次改写（解决率 < 50%），需要回滚并重新改写")
+            feedback_lines.append(f"✗ 拒绝此次改写（解决率 < {threshold_percent:.0f}%），需要回滚并重新改写")
             # 列出仍然错误的案例
             failed_cases = [r for r in verification_results if not r.get('is_correct', False)]
             if failed_cases:

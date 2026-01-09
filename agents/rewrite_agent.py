@@ -52,11 +52,13 @@ class RewriteAgent:
             verification_feedback = analysis.get('verification_feedback', '')
             verification_result = analysis.get('verification_result', {})
             solve_rate = verification_result.get('solve_rate', 0.0)
+            verification_threshold = analysis.get('verification_threshold', 1.0)  # 默认 100%
+            threshold_percent = verification_threshold * 100
             verification_section = (
                 f"\n【重要】验证反馈（上一次改写未通过验证）:\n{verification_feedback}\n\n"
-                f"上一次改写只解决了 {solve_rate:.1%} 的 badcase，低于 50% 的要求。"
+                f"上一次改写只解决了 {solve_rate:.1%} 的 badcase，低于 {threshold_percent:.0f}% 的要求。"
                 f"请仔细分析验证反馈中仍然未解决的 badcase，重点改进这些方面，"
-                f"确保新改写的 prompt 能够解决至少一半的 badcase。\n\n"
+                f"确保新改写的 prompt 能够解决至少 {threshold_percent:.0f}% 的 badcase。\n\n"
             )
         
         messages = [
