@@ -6,7 +6,7 @@
 
 ### 1. 系统主界面
 
-<img src="docs/images/main_page.png" alt="系统主界面" width="50%">
+<img src="docs/images/a.png" alt="系统主界面" width="50%">
 
 系统主界面包含以下功能模块：
 - **数据集上传**：支持 CSV、JSON、JSONL 格式
