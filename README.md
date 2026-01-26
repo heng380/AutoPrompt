@@ -6,7 +6,7 @@
 
 ### 1. 系统主界面
 
-<img src="docs/images/a.png" alt="系统主界面" width="50%">
+<img src="docs/images/a.png" alt="系统主界面" width="80%">
 
 系统主界面包含以下功能模块：
 - **数据集上传**：支持 CSV、JSON、JSONL 格式
@@ -25,7 +25,7 @@
 
 ### 2. 实时日志
 
-<img src="docs/images/realtime_log.png" alt="实时日志" width="50%">
+<img src="docs/images/realtime_log.png" alt="实时日志" width="80%">
 
 系统提供实时日志功能，通过 Server-Sent Events (SSE) 技术实时推送优化过程的详细信息：
 
@@ -44,19 +44,19 @@
 
 ### 3. 准确率变化趋势
 
-<img src="docs/images/acc.png" alt="准确率变化趋势" width="50%">
+<img src="docs/images/acc.png" alt="准确率变化趋势" width="80%">
 
 系统会显示完整的准确率变化折线图，包含所有迭代轮次的数据点，清晰展示优化过程中准确率的提升轨迹。图表支持交互式查看，可以直观地看到每轮迭代的准确率变化。
 
 ### 4. Prompt 优化对比
 
-<img src="docs/images/prompt.png" alt="Prompt 优化对比" width="50%">
+<img src="docs/images/prompt.png" alt="Prompt 优化对比" width="80%">
 
 系统会自动优化 Prompt，左侧显示原始 Prompt，右侧显示优化后的 Prompt。如果最终准确率未达到 100%，系统会智能选择历史最高准确率对应的 prompt，并标注来源和轮次信息。
 
 ### 5. 优化历史详情
 
-<img src="docs/images/image3.png" alt="优化历史详情" width="50%">
+<img src="docs/images/image3.png" alt="优化历史详情" width="80%">
 
 通过下拉框可以选择查看任意轮次的详细信息，包括：
 - 该轮次的 Prompt
@@ -68,7 +68,7 @@
 
 ### 6. 累积优化经验（Memory）
 
-<img src="docs/images/memory.png" alt="累积优化经验" width="50%">
+<img src="docs/images/memory.png" alt="累积优化经验" width="80%">
 
 系统会自动总结每次优化的经验，包括：
 - 迭代轮次和准确率变化趋势（上升/下降）
