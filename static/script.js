@@ -262,6 +262,7 @@ function startOptimization() {
     const prompt = document.getElementById('promptInput').value.trim();
     const maxIterations = parseInt(document.getElementById('maxIterations').value);
     const verificationThreshold = parseFloat(document.getElementById('verificationThreshold').value) / 100; // 转换为 0-1 范围
+    const candidateCount = parseInt(document.getElementById('candidateCount').value);
 
     if (!prompt) {
         alert('请输入 prompt');
@@ -270,6 +271,11 @@ function startOptimization() {
     
     if (isNaN(verificationThreshold) || verificationThreshold < 0 || verificationThreshold > 1) {
         alert('验证阈值必须在 0-100 之间');
+        return;
+    }
+    
+    if (isNaN(candidateCount) || candidateCount < 1 || candidateCount > 10) {
+        alert('候选数量必须在 1-10 之间');
         return;
     }
 
@@ -299,7 +305,8 @@ function startOptimization() {
         body: JSON.stringify({
             prompt: prompt,
             max_iterations: maxIterations,
-            verification_threshold: verificationThreshold
+            verification_threshold: verificationThreshold,
+            candidate_count: candidateCount
         })
     })
     .then(response => response.json())

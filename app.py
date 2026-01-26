@@ -92,12 +92,17 @@ def optimize_prompt():
     data = request.get_json()
     
     original_prompt = data.get('prompt', '').strip()
-    max_iterations = int(data.get('max_iterations', 5))
-    verification_threshold = float(data.get('verification_threshold', 1.0))  # 默认 100%
+    max_iterations = int(data.get('max_iterations', 3))
+    verification_threshold = float(data.get('verification_threshold', 0.5))  # 默认 50%
+    candidate_count = int(data.get('candidate_count', 3))  # 默认 3
     
     # 验证阈值范围
     if verification_threshold < 0 or verification_threshold > 1:
         return jsonify({'error': '验证阈值必须在 0-1 之间（0-100%）'}), 400
+    
+    # 验证候选数量范围
+    if candidate_count < 1 or candidate_count > 10:
+        return jsonify({'error': '候选数量必须在 1-10 之间'}), 400
     
     if not original_prompt:
         return jsonify({'error': 'Prompt 不能为空'}), 400
@@ -131,7 +136,8 @@ def optimize_prompt():
                     dataset=dataset,
                     max_iterations=max_iterations,
                     experiment_id=experiment_id,
-                    verification_threshold=verification_threshold
+                    verification_threshold=verification_threshold,
+                    candidate_count=candidate_count
                 )
                 
                 # 计算最终准确率（使用 graph.run() 返回的准确率，或重新计算）
